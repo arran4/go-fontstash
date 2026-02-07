@@ -133,12 +133,13 @@ func main() {
 	fs.SetFont(fontNormal)
 	fs.SetSize(124.0)
 	fs.SetColor(white)
-	fs.DrawText(dx, dy, "The big ")
+	dx = fs.DrawText(dx, dy, "The big ")
 
 	fs.SetSize(24.0)
 	fs.SetColor(brown)
 	fs.DrawText(dx, dy, "brown fox")
 
+	dx = 10.0 // Reset dx
 	dy += 124.0
 	fs.SetSize(20.0)
 	fs.SetColor(white)
@@ -163,16 +164,16 @@ func main() {
 	drawHorizontalLine(renderer.Result, int(dx), int(dy), 100, lineColor)
 
 	fs.SetAlign(fontstash.AlignLeft | fontstash.AlignMiddle)
-	fs.DrawText(dx+150, dy, "Middle Align")
-	drawHorizontalLine(renderer.Result, int(dx)+150, int(dy), 100, lineColor)
+	fs.DrawText(dx+170, dy, "Middle Align")
+	drawHorizontalLine(renderer.Result, int(dx)+170, int(dy), 100, lineColor)
 
 	fs.SetAlign(fontstash.AlignLeft | fontstash.AlignBottom)
-	fs.DrawText(dx+300, dy, "Bottom Align")
-	drawHorizontalLine(renderer.Result, int(dx)+300, int(dy), 100, lineColor)
+	fs.DrawText(dx+340, dy, "Bottom Align")
+	drawHorizontalLine(renderer.Result, int(dx)+340, int(dy), 100, lineColor)
 
 	fs.SetAlign(fontstash.AlignLeft | fontstash.AlignBaseline)
-	fs.DrawText(dx+450, dy, "Baseline Align")
-	drawHorizontalLine(renderer.Result, int(dx)+450, int(dy), 100, lineColor)
+	fs.DrawText(dx+510, dy, "Baseline Align")
+	drawHorizontalLine(renderer.Result, int(dx)+510, int(dy), 100, lineColor)
 
 	// Save
 	f, err := os.Create("screenshot.png")
