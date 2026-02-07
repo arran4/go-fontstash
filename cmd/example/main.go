@@ -10,7 +10,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/yourname/fontstash/fontstash"
+	"github.com/arran4/go-fontstash/fontstash"
 )
 
 type ImageRenderer struct {

@@ -1,4 +1,4 @@
-module github.com/yourname/fontstash
+module github.com/arran4/go-fontstash
 
 go 1.24.3
 

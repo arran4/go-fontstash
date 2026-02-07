@@ -38,7 +38,7 @@ import (
 	"image"
 	"log"
 
-	"github.com/yourname/fontstash/fontstash"
+	"github.com/arran4/go-fontstash/fontstash"
 )
 
 type MyRenderer struct {
