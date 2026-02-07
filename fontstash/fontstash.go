@@ -262,7 +262,7 @@ func (fs *FontStash) getGlyph(f *Font, codepoint rune, isize, iblur int16) (*Gly
     face, err := opentype.NewFace(renderFont.sfnt, &opentype.FaceOptions{
         Size: size,
         DPI: 72,
-        Hinting: font.HintingNone,
+        Hinting: font.HintingFull,
     })
     if err != nil { return nil, err }
     defer face.Close()

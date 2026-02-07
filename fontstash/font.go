@@ -91,7 +91,7 @@ func (fs *FontStash) getGlyphIndex(f *Font, codepoint rune) int {
 
 func (fs *FontStash) getGlyphKernAdvance(f *Font, glyph1, glyph2 int, size float32) int {
 	ppem := fixed.Int26_6(size * 64)
-	k, err := f.sfnt.Kern(nil, sfnt.GlyphIndex(glyph1), sfnt.GlyphIndex(glyph2), ppem, font.HintingNone)
+	k, err := f.sfnt.Kern(nil, sfnt.GlyphIndex(glyph1), sfnt.GlyphIndex(glyph2), ppem, font.HintingFull)
 	if err != nil {
 		return 0
 	}
