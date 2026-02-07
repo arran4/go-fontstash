@@ -1,6 +1,6 @@
 # Font Stash
 
-Font Stash is a light-weight online font texture atlas builder written in Go. It is a pure Go port of the C library [fontstash](https://github.com/memononen/fontstash) by Mikko Mononen.
+Font Stash is a light-weight online font texture atlas builder written in Go. It is an automated pure Go port of the C library [fontstash](https://github.com/memononen/fontstash) by Mikko Mononen.
 
 It uses `golang.org/x/image/font` and `golang.org/x/image/font/opentype` to render fonts on demand to a texture atlas, replacing the original `stb_truetype` dependency.
 
