@@ -49,7 +49,7 @@ func TestDrawText(t *testing.T) {
 		t.Errorf("Expected verts, got 0")
 	}
 
-    t.Logf("Draws: %d, Verts: %d", mock.Draws, mock.Verts)
+	t.Logf("Draws: %d, Verts: %d", mock.Draws, mock.Verts)
 }
 
 func TestTextBounds(t *testing.T) {
@@ -82,7 +82,7 @@ func TestTextBounds(t *testing.T) {
 		t.Errorf("Expected maxx > minx")
 	}
 
-    t.Logf("Width: %f, Bounds: %v", width, bounds)
+	t.Logf("Width: %f, Bounds: %v", width, bounds)
 }
 
 func TestFlushMemoryLeak(t *testing.T) {
@@ -96,9 +96,9 @@ func TestFlushMemoryLeak(t *testing.T) {
 
 	fs.DrawText(0, 0, "A")
 
-    if len(fs.Verts) != 0 {
-        t.Errorf("Expected Verts to be empty after flush, got %d", len(fs.Verts))
-    }
+	if len(fs.Verts) != 0 {
+		t.Errorf("Expected Verts to be empty after flush, got %d", len(fs.Verts))
+	}
 	if cap(fs.Verts) == 0 {
 		// Just noting that capacity might be non-zero, which is expected.
 	}

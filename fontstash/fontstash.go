@@ -24,15 +24,15 @@ type Vertex struct {
 
 // Glyph represents a glyph in the atlas.
 type Glyph struct {
-	Codepoint rune
-	Index     int // Glyph index in the font
-	Size      int16
-	Blur      int16
-	X0, Y0    int16
-	X1, Y1    int16
-	XAdv      int16
+	Codepoint  rune
+	Index      int // Glyph index in the font
+	Size       int16
+	Blur       int16
+	X0, Y0     int16
+	X1, Y1     int16
+	XAdv       int16
 	XOff, YOff int16
-	Next      int // Index of next glyph in hash chain
+	Next       int // Index of next glyph in hash chain
 }
 
 // Font represents a loaded font.
@@ -121,99 +121,111 @@ type Error string
 func (e Error) Error() string { return string(e) }
 
 const (
-	ErrAtlasFull      = Error("font atlas is full")
-	ErrScratchFull    = Error("scratch memory full")
-	ErrStatesOverflow = Error("state stack overflow")
+	ErrAtlasFull       = Error("font atlas is full")
+	ErrScratchFull     = Error("scratch memory full")
+	ErrStatesOverflow  = Error("state stack overflow")
 	ErrStatesUnderflow = Error("state stack underflow")
 )
 
 // New creates a new FontStash context.
 func New(params Params) (*FontStash, error) {
-    if params.Width == 0 { params.Width = 512 }
-    if params.Height == 0 { params.Height = 512 }
+	if params.Width == 0 {
+		params.Width = 512
+	}
+	if params.Height == 0 {
+		params.Height = 512
+	}
 
-    fs := &FontStash{
-        Params: params,
-        Width: params.Width,
-        Height: params.Height,
-        Itw: 1.0 / float32(params.Width),
-        Ith: 1.0 / float32(params.Height),
-        Dirty: image.Rectangle{Min: image.Point{params.Width, params.Height}, Max: image.Point{0, 0}},
-        Atlas: newAtlas(params.Width, params.Height, 256), // FONS_INIT_ATLAS_NODES
-        Fonts: make([]*Font, 0, 4),
-        TexData: make([]byte, params.Width * params.Height),
-        States: make([]State, 0, 20),
-    }
+	fs := &FontStash{
+		Params:  params,
+		Width:   params.Width,
+		Height:  params.Height,
+		Itw:     1.0 / float32(params.Width),
+		Ith:     1.0 / float32(params.Height),
+		Dirty:   image.Rectangle{Min: image.Point{params.Width, params.Height}, Max: image.Point{0, 0}},
+		Atlas:   newAtlas(params.Width, params.Height, 256), // FONS_INIT_ATLAS_NODES
+		Fonts:   make([]*Font, 0, 4),
+		TexData: make([]byte, params.Width*params.Height),
+		States:  make([]State, 0, 20),
+	}
 
-    // Add white rect at 0,0 for debug drawing.
+	// Add white rect at 0,0 for debug drawing.
 	fs.addWhiteRect(2, 2)
 
-    fs.PushState()
-    fs.ClearState()
+	fs.PushState()
+	fs.ClearState()
 
-    return fs, nil
+	return fs, nil
 }
 
 func (fs *FontStash) PushState() {
-    if len(fs.States) >= 20 { // FONS_MAX_STATES
-        if fs.Params.ErrorCallback != nil {
-            fs.Params.ErrorCallback(ErrStatesOverflow)
-        }
-        return
-    }
+	if len(fs.States) >= 20 { // FONS_MAX_STATES
+		if fs.Params.ErrorCallback != nil {
+			fs.Params.ErrorCallback(ErrStatesOverflow)
+		}
+		return
+	}
 
-    if len(fs.States) > 0 {
-        top := fs.States[len(fs.States)-1]
-        fs.States = append(fs.States, top)
-    } else {
-        fs.States = append(fs.States, State{}) // Should be cleared anyway
-    }
+	if len(fs.States) > 0 {
+		top := fs.States[len(fs.States)-1]
+		fs.States = append(fs.States, top)
+	} else {
+		fs.States = append(fs.States, State{}) // Should be cleared anyway
+	}
 }
 
 func (fs *FontStash) PopState() {
-    if len(fs.States) <= 1 {
-        if fs.Params.ErrorCallback != nil {
-             fs.Params.ErrorCallback(ErrStatesUnderflow)
-        }
-        return
-    }
-    fs.States = fs.States[:len(fs.States)-1]
+	if len(fs.States) <= 1 {
+		if fs.Params.ErrorCallback != nil {
+			fs.Params.ErrorCallback(ErrStatesUnderflow)
+		}
+		return
+	}
+	fs.States = fs.States[:len(fs.States)-1]
 }
 
 func (fs *FontStash) ClearState() {
-    state := &fs.States[len(fs.States)-1]
-    state.Size = 12.0
-    state.Color = 0xffffffff
-    state.Font = 0
-    state.Blur = 0
-    state.Spacing = 0
-    state.Align = AlignLeft | AlignBaseline
+	state := &fs.States[len(fs.States)-1]
+	state.Size = 12.0
+	state.Color = 0xffffffff
+	state.Font = 0
+	state.Blur = 0
+	state.Spacing = 0
+	state.Align = AlignLeft | AlignBaseline
 }
 
 func (fs *FontStash) getState() *State {
-    return &fs.States[len(fs.States)-1]
+	return &fs.States[len(fs.States)-1]
 }
 
 func (fs *FontStash) addWhiteRect(w, h int) {
-    gx, gy, ok := fs.Atlas.addRect(w, h)
-    if !ok {
-        return
-    }
+	gx, gy, ok := fs.Atlas.addRect(w, h)
+	if !ok {
+		return
+	}
 
-    // Rasterize
-    dst := fs.TexData
-    width := fs.Params.Width
-    for y := 0; y < h; y++ {
-        for x := 0; x < w; x++ {
-            dst[(gy+y)*width + (gx+x)] = 0xff
-        }
-    }
+	// Rasterize
+	dst := fs.TexData
+	width := fs.Params.Width
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			dst[(gy+y)*width+(gx+x)] = 0xff
+		}
+	}
 
-    // Update dirty rect
-    if gx < fs.Dirty.Min.X { fs.Dirty.Min.X = gx }
-    if gy < fs.Dirty.Min.Y { fs.Dirty.Min.Y = gy }
-    if gx+w > fs.Dirty.Max.X { fs.Dirty.Max.X = gx+w }
-    if gy+h > fs.Dirty.Max.Y { fs.Dirty.Max.Y = gy+h }
+	// Update dirty rect
+	if gx < fs.Dirty.Min.X {
+		fs.Dirty.Min.X = gx
+	}
+	if gy < fs.Dirty.Min.Y {
+		fs.Dirty.Min.Y = gy
+	}
+	if gx+w > fs.Dirty.Max.X {
+		fs.Dirty.Max.X = gx + w
+	}
+	if gy+h > fs.Dirty.Max.Y {
+		fs.Dirty.Max.Y = gy + h
+	}
 }
 
 func hashInt(a int) int {
@@ -227,128 +239,142 @@ func hashInt(a int) int {
 }
 
 func (fs *FontStash) getGlyph(f *Font, codepoint rune, isize, iblur int16) (*Glyph, error) {
-    if isize < 2 { return nil, nil }
-    if iblur > 20 { iblur = 20 }
-    pad := int(iblur) + 2
+	if isize < 2 {
+		return nil, nil
+	}
+	if iblur > 20 {
+		iblur = 20
+	}
+	pad := int(iblur) + 2
 
-    h := hashInt(int(codepoint)) & (len(f.Lut) - 1)
-    i := f.Lut[h]
-    for i != -1 {
-        g := &f.Glyphs[i]
-        if g.Codepoint == codepoint && g.Size == isize && g.Blur == iblur {
-            return g, nil
-        }
-        i = g.Next
-    }
+	h := hashInt(int(codepoint)) & (len(f.Lut) - 1)
+	i := f.Lut[h]
+	for i != -1 {
+		g := &f.Glyphs[i]
+		if g.Codepoint == codepoint && g.Size == isize && g.Blur == iblur {
+			return g, nil
+		}
+		i = g.Next
+	}
 
-    // Create glyph
-    gIndex := fs.getGlyphIndex(f, codepoint)
-    renderFont := f
-    if gIndex == 0 {
-        for _, fb := range f.Fallbacks {
-            fallbackFont := fs.Fonts[fb]
-            fallbackIndex := fs.getGlyphIndex(fallbackFont, codepoint)
-            if fallbackIndex != 0 {
-                gIndex = fallbackIndex
-                renderFont = fallbackFont
-                break
-            }
-        }
-    }
+	// Create glyph
+	gIndex := fs.getGlyphIndex(f, codepoint)
+	renderFont := f
+	if gIndex == 0 {
+		for _, fb := range f.Fallbacks {
+			fallbackFont := fs.Fonts[fb]
+			fallbackIndex := fs.getGlyphIndex(fallbackFont, codepoint)
+			if fallbackIndex != 0 {
+				gIndex = fallbackIndex
+				renderFont = fallbackFont
+				break
+			}
+		}
+	}
 
-    size := float64(isize) / 10.0
+	size := float64(isize) / 10.0
 
-    // Get glyph metrics and bitmap
-    face, err := opentype.NewFace(renderFont.sfnt, &opentype.FaceOptions{
-        Size: size,
-        DPI: 72,
-        Hinting: font.HintingFull,
-    })
-    if err != nil { return nil, err }
-    defer face.Close()
+	// Get glyph metrics and bitmap
+	face, err := opentype.NewFace(renderFont.sfnt, &opentype.FaceOptions{
+		Size:    size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer face.Close()
 
-    // Bounds check skipped
-    _, advance, ok := face.GlyphBounds(codepoint)
-    if !ok {
-        // Continue but with empty bounds/image?
-        // Fallthrough
-    }
+	// Bounds check skipped
+	_, advance, ok := face.GlyphBounds(codepoint)
+	if !ok {
+		// Continue but with empty bounds/image?
+		// Fallthrough
+	}
 
-    dr, mask, _, _, ok := face.Glyph(fixed.P(0, 0), codepoint)
-    if !ok {
-        // Fallthrough
-    }
+	dr, mask, _, _, ok := face.Glyph(fixed.P(0, 0), codepoint)
+	if !ok {
+		// Fallthrough
+	}
 
-    gw := dr.Dx() + pad*2
-    gh := dr.Dy() + pad*2
+	gw := dr.Dx() + pad*2
+	gh := dr.Dy() + pad*2
 
-    // Find free spot
-    gx, gy, ok := fs.Atlas.addRect(gw, gh)
-    if !ok {
-        // Atlas full
-        if fs.Params.ErrorCallback != nil {
-            fs.Params.ErrorCallback(ErrAtlasFull)
-        }
-        // Try again? The C code calls handler and tries again.
-        // User might resize in callback.
-        gx, gy, ok = fs.Atlas.addRect(gw, gh)
-        if !ok {
-            return nil, ErrAtlasFull
-        }
-    }
+	// Find free spot
+	gx, gy, ok := fs.Atlas.addRect(gw, gh)
+	if !ok {
+		// Atlas full
+		if fs.Params.ErrorCallback != nil {
+			fs.Params.ErrorCallback(ErrAtlasFull)
+		}
+		// Try again? The C code calls handler and tries again.
+		// User might resize in callback.
+		gx, gy, ok = fs.Atlas.addRect(gw, gh)
+		if !ok {
+			return nil, ErrAtlasFull
+		}
+	}
 
-    // Init glyph
-    glyph := Glyph{
-        Codepoint: codepoint,
-        Size:      isize,
-        Blur:      iblur,
-        Index:     gIndex,
-        X0:        int16(gx),
-        Y0:        int16(gy),
-        X1:        int16(gx + gw),
-        Y1:        int16(gy + gh),
-        XAdv:      int16(int32(advance) * 10 / 64),
-        XOff: int16(dr.Min.X - pad),
-        YOff: int16(dr.Min.Y - pad),
-    }
+	// Init glyph
+	glyph := Glyph{
+		Codepoint: codepoint,
+		Size:      isize,
+		Blur:      iblur,
+		Index:     gIndex,
+		X0:        int16(gx),
+		Y0:        int16(gy),
+		X1:        int16(gx + gw),
+		Y1:        int16(gy + gh),
+		XAdv:      int16(int32(advance) * 10 / 64),
+		XOff:      int16(dr.Min.X - pad),
+		YOff:      int16(dr.Min.Y - pad),
+	}
 
-    // Copy bitmap to texture
-    dst := fs.TexData
-    width := fs.Params.Width
+	// Copy bitmap to texture
+	dst := fs.TexData
+	width := fs.Params.Width
 
-    if mask != nil {
-        b := mask.Bounds()
-        for y := 0; y < b.Dy(); y++ {
-            for x := 0; x < b.Dx(); x++ {
-                 _, _, _, a := mask.At(x + b.Min.X, y + b.Min.Y).RGBA()
-                 val := uint8(a >> 8)
+	if mask != nil {
+		b := mask.Bounds()
+		for y := 0; y < b.Dy(); y++ {
+			for x := 0; x < b.Dx(); x++ {
+				_, _, _, a := mask.At(x+b.Min.X, y+b.Min.Y).RGBA()
+				val := uint8(a >> 8)
 
-                 targetX := gx + pad + x
-                 targetY := gy + pad + y
-                 if targetX < width && targetY < fs.Params.Height {
-                     dst[targetY * width + targetX] = val
-                 }
-            }
-        }
-    }
+				targetX := gx + pad + x
+				targetY := gy + pad + y
+				if targetX < width && targetY < fs.Params.Height {
+					dst[targetY*width+targetX] = val
+				}
+			}
+		}
+	}
 
-    // Blur if needed
-    if iblur > 0 {
-        fs.blur(gx, gy, gw, gh, width, int(iblur))
-    }
+	// Blur if needed
+	if iblur > 0 {
+		fs.blur(gx, gy, gw, gh, width, int(iblur))
+	}
 
-    // Update dirty rect
-    if gx < fs.Dirty.Min.X { fs.Dirty.Min.X = gx }
-    if gy < fs.Dirty.Min.Y { fs.Dirty.Min.Y = gy }
-    if gx+gw > fs.Dirty.Max.X { fs.Dirty.Max.X = gx+gw }
-    if gy+gh > fs.Dirty.Max.Y { fs.Dirty.Max.Y = gy+gh }
+	// Update dirty rect
+	if gx < fs.Dirty.Min.X {
+		fs.Dirty.Min.X = gx
+	}
+	if gy < fs.Dirty.Min.Y {
+		fs.Dirty.Min.Y = gy
+	}
+	if gx+gw > fs.Dirty.Max.X {
+		fs.Dirty.Max.X = gx + gw
+	}
+	if gy+gh > fs.Dirty.Max.Y {
+		fs.Dirty.Max.Y = gy + gh
+	}
 
-    // Add to cache
-    f.Glyphs = append(f.Glyphs, glyph)
-    f.Glyphs[len(f.Glyphs)-1].Next = f.Lut[h]
-    f.Lut[h] = len(f.Glyphs) - 1
+	// Add to cache
+	f.Glyphs = append(f.Glyphs, glyph)
+	f.Glyphs[len(f.Glyphs)-1].Next = f.Lut[h]
+	f.Lut[h] = len(f.Glyphs) - 1
 
-    return &f.Glyphs[len(f.Glyphs)-1], nil
+	return &f.Glyphs[len(f.Glyphs)-1], nil
 }
 
 func (fs *FontStash) blur(x, y, w, h, stride, blur int) {
@@ -357,7 +383,7 @@ func (fs *FontStash) blur(x, y, w, h, stride, blur int) {
 	}
 
 	sigma := float32(blur) * 0.57735 // 1 / sqrt(3)
-	alpha := int((1<<16) * (1.0 - math.Exp(float64(-2.3 / (sigma+1.0)))))
+	alpha := int((1 << 16) * (1.0 - math.Exp(float64(-2.3/(sigma+1.0)))))
 
 	fs.blurRows(x, y, w, h, stride, alpha)
 	fs.blurCols(x, y, w, h, stride, alpha)
@@ -366,22 +392,22 @@ func (fs *FontStash) blur(x, y, w, h, stride, blur int) {
 }
 
 func (fs *FontStash) blurRows(x, y, w, h, stride, alpha int) {
-    dst := fs.TexData
-    for r := 0; r < h; r++ {
-        offset := (y+r)*stride + x
-        z := 0
-        for c := 1; c < w; c++ {
-            z += (alpha * ((int(dst[offset+c]) << 7) - z)) >> 16
-            dst[offset+c] = uint8(z >> 7)
-        }
-        dst[offset+w-1] = 0
-        z = 0
-        for c := w - 2; c >= 0; c-- {
-            z += (alpha * ((int(dst[offset+c]) << 7) - z)) >> 16
-            dst[offset+c] = uint8(z >> 7)
-        }
-        dst[offset] = 0
-    }
+	dst := fs.TexData
+	for r := 0; r < h; r++ {
+		offset := (y+r)*stride + x
+		z := 0
+		for c := 1; c < w; c++ {
+			z += (alpha * ((int(dst[offset+c]) << 7) - z)) >> 16
+			dst[offset+c] = uint8(z >> 7)
+		}
+		dst[offset+w-1] = 0
+		z = 0
+		for c := w - 2; c >= 0; c-- {
+			z += (alpha * ((int(dst[offset+c]) << 7) - z)) >> 16
+			dst[offset+c] = uint8(z >> 7)
+		}
+		dst[offset] = 0
+	}
 }
 
 // SetSize sets the font size in the current state.
@@ -528,9 +554,7 @@ func (fs *FontStash) DrawText(x, y float32, str string) float32 {
 	q := Quad{}
 	prevGlyphIndex := -1
 
-	runes := []rune(str) // Need runes for indexing
-
-	for _, codepoint := range runes {
+	for _, codepoint := range str {
 		glyph, err := fs.getGlyph(f, codepoint, isize, iblur)
 		if err != nil {
 			continue // Or stop?
@@ -580,23 +604,34 @@ func (fs *FontStash) TextBounds(x, y float32, str string, bounds *[4]float32) fl
 
 	q := Quad{}
 	prevGlyphIndex := -1
-	runes := []rune(str)
 
-	for _, codepoint := range runes {
+	for _, codepoint := range str {
 		glyph, err := fs.getGlyph(f, codepoint, isize, iblur)
 		if err != nil {
 			continue
 		}
 		if glyph != nil {
 			fs.getQuad(f, prevGlyphIndex, glyph, scale, state.Spacing, &x, &y, &q)
-			if q.X0 < minx { minx = q.X0 }
-			if q.X1 > maxx { maxx = q.X1 }
+			if q.X0 < minx {
+				minx = q.X0
+			}
+			if q.X1 > maxx {
+				maxx = q.X1
+			}
 			if fs.Params.Flags&ZeroTopLeft != 0 {
-				if q.Y0 < miny { miny = q.Y0 }
-				if q.Y1 > maxy { maxy = q.Y1 }
+				if q.Y0 < miny {
+					miny = q.Y0
+				}
+				if q.Y1 > maxy {
+					maxy = q.Y1
+				}
 			} else {
-				if q.Y1 < miny { miny = q.Y1 }
-				if q.Y0 > maxy { maxy = q.Y0 }
+				if q.Y1 < miny {
+					miny = q.Y1
+				}
+				if q.Y0 > maxy {
+					maxy = q.Y0
+				}
 			}
 		}
 		if glyph != nil {
@@ -653,11 +688,11 @@ func (fs *FontStash) LineBounds(y float32) (miny, maxy float32) {
 	y += fs.getVertAlign(f, state.Align, isize)
 
 	if fs.Params.Flags&ZeroTopLeft != 0 {
-		miny = y - f.Ascender * size
-		maxy = miny + f.LineHeight * size
+		miny = y - f.Ascender*size
+		maxy = miny + f.LineHeight*size
 	} else {
-		maxy = y + f.Descender * size
-		miny = maxy - f.LineHeight * size
+		maxy = y + f.Descender*size
+		miny = maxy - f.LineHeight*size
 	}
 	return
 }
@@ -710,13 +745,13 @@ func (fs *FontStash) ExpandAtlas(width, height int) bool {
 	// The safest is to mark everything dirty.
 	// But `ExpandAtlas` logic in C:
 	/*
-	// Add existing data as dirty.
-	for (i = 0; i < stash->atlas->nnodes; i++)
-		maxy = fons__maxi(maxy, stash->atlas->nodes[i].y);
-	stash->dirtyRect[0] = 0;
-	stash->dirtyRect[1] = 0;
-	stash->dirtyRect[2] = stash->params.width;
-	stash->dirtyRect[3] = maxy;
+		// Add existing data as dirty.
+		for (i = 0; i < stash->atlas->nnodes; i++)
+			maxy = fons__maxi(maxy, stash->atlas->nodes[i].y);
+		stash->dirtyRect[0] = 0;
+		stash->dirtyRect[1] = 0;
+		stash->dirtyRect[2] = stash->params.width;
+		stash->dirtyRect[3] = maxy;
 	*/
 	// This sets a valid rect covering used area.
 	// image.Rect(0,0, width, maxy) creates Min=(0,0), Max=(width, maxy).
@@ -777,9 +812,9 @@ func (fs *FontStash) flush() {
 	// Flush texture
 	if fs.Dirty.Min.X < fs.Dirty.Max.X && fs.Dirty.Min.Y < fs.Dirty.Max.Y {
 		if fs.Params.Renderer != nil {
-            // Check bounds?
-            // The dirty rect might be larger than texture?
-            // fs.Dirty is in texture coords.
+			// Check bounds?
+			// The dirty rect might be larger than texture?
+			// fs.Dirty is in texture coords.
 			fs.Params.Renderer.Update(fs.Dirty, fs.TexData, fs.Params.Width)
 		}
 		// Reset dirty rect
@@ -789,17 +824,17 @@ func (fs *FontStash) flush() {
 	// Flush triangles
 	if fs.NVerts > 0 {
 		if fs.Params.Renderer != nil {
-            // Convert fs.Verts, fs.TCoords, fs.Colors to []Vertex
-            verts := make([]Vertex, fs.NVerts)
-            for i := 0; i < fs.NVerts; i++ {
-                verts[i] = Vertex{
-                    X: fs.Verts[i*2],
-                    Y: fs.Verts[i*2+1],
-                    U: fs.TCoords[i*2],
-                    V: fs.TCoords[i*2+1],
-                    Color: fs.Colors[i],
-                }
-            }
+			// Convert fs.Verts, fs.TCoords, fs.Colors to []Vertex
+			verts := make([]Vertex, fs.NVerts)
+			for i := 0; i < fs.NVerts; i++ {
+				verts[i] = Vertex{
+					X:     fs.Verts[i*2],
+					Y:     fs.Verts[i*2+1],
+					U:     fs.TCoords[i*2],
+					V:     fs.TCoords[i*2+1],
+					Color: fs.Colors[i],
+				}
+			}
 			fs.Params.Renderer.Draw(verts)
 		}
 		fs.NVerts = 0
@@ -809,22 +844,21 @@ func (fs *FontStash) flush() {
 	}
 }
 
-
 func (fs *FontStash) blurCols(x, y, w, h, stride, alpha int) {
-    dst := fs.TexData
-    for c := 0; c < w; c++ {
-        offset := y*stride + x + c
-        z := 0
-        for r := stride; r < h*stride; r += stride {
-            z += (alpha * ((int(dst[offset+r]) << 7) - z)) >> 16
-            dst[offset+r] = uint8(z >> 7)
-        }
-        dst[offset+(h-1)*stride] = 0
-        z = 0
-        for r := (h - 2) * stride; r >= 0; r -= stride {
-            z += (alpha * ((int(dst[offset+r]) << 7) - z)) >> 16
-            dst[offset+r] = uint8(z >> 7)
-        }
-        dst[offset] = 0
-    }
+	dst := fs.TexData
+	for c := 0; c < w; c++ {
+		offset := y*stride + x + c
+		z := 0
+		for r := stride; r < h*stride; r += stride {
+			z += (alpha * ((int(dst[offset+r]) << 7) - z)) >> 16
+			dst[offset+r] = uint8(z >> 7)
+		}
+		dst[offset+(h-1)*stride] = 0
+		z = 0
+		for r := (h - 2) * stride; r >= 0; r -= stride {
+			z += (alpha * ((int(dst[offset+r]) << 7) - z)) >> 16
+			dst[offset+r] = uint8(z >> 7)
+		}
+		dst[offset] = 0
+	}
 }
