@@ -64,7 +64,7 @@ func (r *ImageRenderer) Draw(verts []fontstash.Vertex) {
 
 		c := v0.Color
 		col := color.RGBA{
-			R: uint8(c),       // R is LSB in C code usually for LE?
+			R: uint8(c), // R is LSB in C code usually for LE?
 			G: uint8(c >> 8),
 			B: uint8(c >> 16),
 			A: uint8(c >> 24),

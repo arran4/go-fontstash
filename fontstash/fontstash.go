@@ -117,16 +117,16 @@ const (
 
 // Internal limits and defaults
 const (
-	maxStates         = 20
-	maxBlur           = 20
-	minFontSize       = 2
-	blurPadding       = 2
-	initAtlasNodes    = 256
-	initFonts         = 4
-	maxVertices       = 1024
-	whiteRectSize     = 2
-	sizeScale         = 10.0
-	vertsPerQuad      = 6
+	maxStates      = 20
+	maxBlur        = 20
+	minFontSize    = 2
+	blurPadding    = 2
+	initAtlasNodes = 256
+	initFonts      = 4
+	maxVertices    = 1024
+	whiteRectSize  = 2
+	sizeScale      = 10.0
+	vertsPerQuad   = 6
 )
 
 // Common errors
@@ -253,128 +253,142 @@ func hashInt(a int) int {
 }
 
 func (fs *FontStash) getGlyph(f *Font, codepoint rune, isize, iblur int16) (*Glyph, error) {
-  if isize < minFontSize { return nil, nil }
-  if iblur > maxBlur { iblur = maxBlur }
-  pad := int(iblur) + blurPadding
+	if isize < minFontSize {
+		return nil, nil
+	}
+	if iblur > maxBlur {
+		iblur = maxBlur
+	}
+	pad := int(iblur) + blurPadding
 
-    h := hashInt(int(codepoint)) & (len(f.Lut) - 1)
-    i := f.Lut[h]
-    for i != -1 {
-        g := &f.Glyphs[i]
-        if g.Codepoint == codepoint && g.Size == isize && g.Blur == iblur {
-            return g, nil
-        }
-        i = g.Next
-    }
+	h := hashInt(int(codepoint)) & (len(f.Lut) - 1)
+	i := f.Lut[h]
+	for i != -1 {
+		g := &f.Glyphs[i]
+		if g.Codepoint == codepoint && g.Size == isize && g.Blur == iblur {
+			return g, nil
+		}
+		i = g.Next
+	}
 
-    // Create glyph
-    gIndex := fs.getGlyphIndex(f, codepoint)
-    renderFont := f
-    if gIndex == 0 {
-        for _, fb := range f.Fallbacks {
-            fallbackFont := fs.Fonts[fb]
-            fallbackIndex := fs.getGlyphIndex(fallbackFont, codepoint)
-            if fallbackIndex != 0 {
-                gIndex = fallbackIndex
-                renderFont = fallbackFont
-                break
-            }
-        }
-    }
+	// Create glyph
+	gIndex := fs.getGlyphIndex(f, codepoint)
+	renderFont := f
+	if gIndex == 0 {
+		for _, fb := range f.Fallbacks {
+			fallbackFont := fs.Fonts[fb]
+			fallbackIndex := fs.getGlyphIndex(fallbackFont, codepoint)
+			if fallbackIndex != 0 {
+				gIndex = fallbackIndex
+				renderFont = fallbackFont
+				break
+			}
+		}
+	}
 
-    size := float64(isize) / sizeScale
+	size := float64(isize) / sizeScale
 
-    // Get glyph metrics and bitmap
-    face, err := opentype.NewFace(renderFont.sfnt, &opentype.FaceOptions{
-        Size: size,
-        DPI: 72,
-        Hinting: font.HintingFull,
-    })
-    if err != nil { return nil, err }
-    defer face.Close()
+	// Get glyph metrics and bitmap
+	face, err := opentype.NewFace(renderFont.sfnt, &opentype.FaceOptions{
+		Size:    size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer face.Close()
 
-    // Bounds check skipped
-    _, advance, ok := face.GlyphBounds(codepoint)
-    if !ok {
-        // Continue but with empty bounds/image?
-        // Fallthrough
-    }
+	// Bounds check skipped
+	_, advance, ok := face.GlyphBounds(codepoint)
+	if !ok {
+		// Continue but with empty bounds/image?
+		// Fallthrough
+	}
 
-    dr, mask, _, _, ok := face.Glyph(fixed.P(0, 0), codepoint)
-    if !ok {
-        // Fallthrough
-    }
+	dr, mask, _, _, ok := face.Glyph(fixed.P(0, 0), codepoint)
+	if !ok {
+		// Fallthrough
+	}
 
-    gw := dr.Dx() + pad*2
-    gh := dr.Dy() + pad*2
+	gw := dr.Dx() + pad*2
+	gh := dr.Dy() + pad*2
 
-    // Find free spot
-    gx, gy, ok := fs.Atlas.addRect(gw, gh)
-    if !ok {
-        // Atlas full
-        if fs.Params.ErrorCallback != nil {
-            fs.Params.ErrorCallback(ErrAtlasFull)
-        }
-        // Try again? The C code calls handler and tries again.
-        // User might resize in callback.
-        gx, gy, ok = fs.Atlas.addRect(gw, gh)
-        if !ok {
-            return nil, ErrAtlasFull
-        }
-    }
+	// Find free spot
+	gx, gy, ok := fs.Atlas.addRect(gw, gh)
+	if !ok {
+		// Atlas full
+		if fs.Params.ErrorCallback != nil {
+			fs.Params.ErrorCallback(ErrAtlasFull)
+		}
+		// Try again? The C code calls handler and tries again.
+		// User might resize in callback.
+		gx, gy, ok = fs.Atlas.addRect(gw, gh)
+		if !ok {
+			return nil, ErrAtlasFull
+		}
+	}
 
-    // Init glyph
-    glyph := Glyph{
-        Codepoint: codepoint,
-        Size:      isize,
-        Blur:      iblur,
-        Index:     gIndex,
-        X0:        int16(gx),
-        Y0:        int16(gy),
-        X1:        int16(gx + gw),
-        Y1:        int16(gy + gh),
-        XAdv:      int16(int32(advance) * sizeScale / 64),
-        XOff: int16(dr.Min.X - pad),
-        YOff: int16(dr.Min.Y - pad),
-    }
+	// Init glyph
+	glyph := Glyph{
+		Codepoint: codepoint,
+		Size:      isize,
+		Blur:      iblur,
+		Index:     gIndex,
+		X0:        int16(gx),
+		Y0:        int16(gy),
+		X1:        int16(gx + gw),
+		Y1:        int16(gy + gh),
+		XAdv:      int16(int32(advance) * sizeScale / 64),
+		XOff:      int16(dr.Min.X - pad),
+		YOff:      int16(dr.Min.Y - pad),
+	}
 
-    // Copy bitmap to texture
-    dst := fs.TexData
-    width := fs.Params.Width
+	// Copy bitmap to texture
+	dst := fs.TexData
+	width := fs.Params.Width
 
-    if mask != nil {
-        b := mask.Bounds()
-        for y := 0; y < b.Dy(); y++ {
-            for x := 0; x < b.Dx(); x++ {
-                 _, _, _, a := mask.At(x + b.Min.X, y + b.Min.Y).RGBA()
-                 val := uint8(a >> 8)
+	if mask != nil {
+		b := mask.Bounds()
+		for y := 0; y < b.Dy(); y++ {
+			for x := 0; x < b.Dx(); x++ {
+				_, _, _, a := mask.At(x+b.Min.X, y+b.Min.Y).RGBA()
+				val := uint8(a >> 8)
 
-                 targetX := gx + pad + x
-                 targetY := gy + pad + y
-                 if targetX < width && targetY < fs.Params.Height {
-                     dst[targetY * width + targetX] = val
-                 }
-            }
-        }
-    }
+				targetX := gx + pad + x
+				targetY := gy + pad + y
+				if targetX < width && targetY < fs.Params.Height {
+					dst[targetY*width+targetX] = val
+				}
+			}
+		}
+	}
 
-    // Blur if needed
-    if iblur > 0 {
-        fs.blur(gx, gy, gw, gh, width, int(iblur))
-    }
+	// Blur if needed
+	if iblur > 0 {
+		fs.blur(gx, gy, gw, gh, width, int(iblur))
+	}
 
-    // Update dirty rect
-    if gx < fs.Dirty.Min.X { fs.Dirty.Min.X = gx }
-    if gy < fs.Dirty.Min.Y { fs.Dirty.Min.Y = gy }
-    if gx+gw > fs.Dirty.Max.X { fs.Dirty.Max.X = gx+gw }
-    if gy+gh > fs.Dirty.Max.Y { fs.Dirty.Max.Y = gy+gh }
+	// Update dirty rect
+	if gx < fs.Dirty.Min.X {
+		fs.Dirty.Min.X = gx
+	}
+	if gy < fs.Dirty.Min.Y {
+		fs.Dirty.Min.Y = gy
+	}
+	if gx+gw > fs.Dirty.Max.X {
+		fs.Dirty.Max.X = gx + gw
+	}
+	if gy+gh > fs.Dirty.Max.Y {
+		fs.Dirty.Max.Y = gy + gh
+	}
 
-    // Add to cache
-    f.Glyphs = append(f.Glyphs, glyph)
-    f.Glyphs[len(f.Glyphs)-1].Next = f.Lut[h]
-    f.Lut[h] = len(f.Glyphs) - 1
+	// Add to cache
+	f.Glyphs = append(f.Glyphs, glyph)
+	f.Glyphs[len(f.Glyphs)-1].Next = f.Lut[h]
+	f.Lut[h] = len(f.Glyphs) - 1
 
-    return &f.Glyphs[len(f.Glyphs)-1], nil
+	return &f.Glyphs[len(f.Glyphs)-1], nil
 }
 
 func (fs *FontStash) blur(x, y, w, h, stride, blur int) {
