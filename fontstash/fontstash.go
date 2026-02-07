@@ -743,19 +743,6 @@ func (fs *FontStash) ExpandAtlas(width, height int) bool {
 	// If renderer keeps content on Resize, we don't need to re-upload everything?
 	// But generic renderer might lose content.
 	// The safest is to mark everything dirty.
-	// But `ExpandAtlas` logic in C:
-	/*
-		// Add existing data as dirty.
-		for (i = 0; i < stash->atlas->nnodes; i++)
-			maxy = fons__maxi(maxy, stash->atlas->nodes[i].y);
-		stash->dirtyRect[0] = 0;
-		stash->dirtyRect[1] = 0;
-		stash->dirtyRect[2] = stash->params.width;
-		stash->dirtyRect[3] = maxy;
-	*/
-	// This sets a valid rect covering used area.
-	// image.Rect(0,0, width, maxy) creates Min=(0,0), Max=(width, maxy).
-	// This is NOT inverted. This is a valid dirty rect.
 	fs.Dirty = image.Rect(0, 0, width, maxy)
 
 	fs.Params.Width = width
